@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quiz Nature</title>
+  <meta name="description" content="Quiz naturalistes : chants d'oiseaux, mammifères, papillons.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2315803d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 7h.01'/%3E%3Cpath d='M3.4 18H12a8 8 0 0 0 8-8V7a4 4 0 0 0-7.28-2.3L2 20'/%3E%3Cpath d='m20 7 2 .5-2 .5'/%3E%3Cpath d='M10 18v3'/%3E%3Cpath d='M14 17.75V21'/%3E%3Cpath d='M7 18a6 6 0 0 0 3.84-10.61'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="entete">
+    <div class="conteneur entete-contenu">
+      <a class="marque" href="#/">
+        <span class="marque-icone" data-icone="oiseau"></span>
+        <span>Quiz Nature</span>
+      </a>
+      <nav class="fil" id="fil-ariane" aria-label="Fil d'Ariane"></nav>
+    </div>
+  </header>
+
+  <main id="app" class="conteneur" tabindex="-1"></main>
+
+  <noscript>
+    <p class="conteneur">Cette application a besoin de JavaScript pour fonctionner.</p>
+  </noscript>
+
+  <script src="js/outils.js"></script>
+  <script src="js/combobox.js"></script>
+  <script src="js/quiz.js"></script>
+  <script src="data/oiseaux-chants.js"></script>
+  <script src="js/catalogue.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

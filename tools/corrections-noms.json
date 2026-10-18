@@ -1,0 +1,33 @@
+{
+  "_aide": "Clés = nom du fichier sans le numéro ni « .mp3 » ; valeurs = nom affiché dans le quiz. « ignorer » = fichiers non utilisés.",
+  "ignorer": [
+    "Pipit maritime et Pipit spioncell",
+    "Corneille noire_Corneille mantelé"
+  ],
+  "corrections": {
+    "Alouette hausse col": "Alouette haussecol",
+    "Bec croisé bifascié": "Bec-croisé bifascié",
+    "Bec croisé des sapins": "Bec-croisé des sapins",
+    "Bec croisé perroquet": "Bec-croisé perroquet",
+    "Engoulevent d_europe": "Engoulevent d'Europe",
+    "Etourneau sansonnet": "Étourneau sansonnet",
+    "Etourneau unicolore": "Étourneau unicolore",
+    "Fauvette orphée oriental": "Fauvette orphée orientale",
+    "Fauvette Rüppell": "Fauvette de Rüppell",
+    "Guêpier d_europe": "Guêpier d'Europe",
+    "Lagopède des Saules": "Lagopède des saules",
+    "Lusciniole à moustache": "Lusciniole à moustaches",
+    "Martin pêcheur": "Martin-pêcheur d'Europe",
+    "Mésange huppé": "Mésange huppée",
+    "Oedicnème criard": "Œdicnème criard",
+    "Pic a dos blanc": "Pic à dos blanc",
+    "Pie grièche à poitrine rose": "Pie-grièche à poitrine rose",
+    "Pie grièche à tête rousse": "Pie-grièche à tête rousse",
+    "Pie grièche écorcheur": "Pie-grièche écorcheur",
+    "Pie grièche grise": "Pie-grièche grise",
+    "Pie grièche masquée": "Pie-grièche masquée",
+    "Rollier d_europe": "Rollier d'Europe",
+    "Rossignole philomèle": "Rossignol philomèle",
+    "Rougequeue noire": "Rougequeue noir"
+  }
+}
