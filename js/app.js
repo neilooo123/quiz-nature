@@ -96,6 +96,31 @@
     return `<span class="fil-element"><span class="separateur">${icone("chevronDroite")}</span><span aria-current="page">${echapper(texte)}</span></span>`;
   }
 
+  // Petits boutons ▶ portant data-son : un seul lecteur partagé, un seul son à la fois.
+  function brancherBoutonsSon(ecran) {
+    const audio = new Audio();
+    let boutonActif = null;
+    const majBouton = () => {
+      if (boutonActif) boutonActif.innerHTML = icone(audio.paused ? "lecture" : "pause", "icone--plein");
+    };
+    audio.addEventListener("play", majBouton);
+    audio.addEventListener("pause", majBouton);
+    nettoyages.push(() => {
+      audio.pause();
+      audio.removeAttribute("src");
+    });
+
+    ecran.addEventListener("click", (e) => {
+      const bouton = e.target.closest("[data-son]");
+      if (!bouton) return;
+      if (bouton === boutonActif && !audio.paused) return audio.pause();
+      if (boutonActif && boutonActif !== bouton) boutonActif.innerHTML = icone("lecture", "icone--plein");
+      if (bouton !== boutonActif) audio.src = bouton.dataset.son;
+      boutonActif = bouton;
+      audio.play().catch(() => {});
+    });
+  }
+
   // ---------- Écran 1 : taxons ----------
 
   function ecranTaxons() {
@@ -185,12 +210,11 @@
               ${groupe.especes
                 .map(
                   (e) => `
-                <li data-cle="${echapper(normaliser(e.nom))}">
-                  <label class="espece">
-                    <input type="checkbox" value="${e.id}" data-dans="${i}"${selection.has(e.id) ? " checked" : ""}>
-                    <span>${echapper(e.nom)}</span>
-                    ${e.sons.length > 1 ? `<span class="espece-sons">${e.sons.length} sons</span>` : ""}
-                  </label>
+                <li class="espece" data-cle="${echapper(normaliser(e.nom))}">
+                  <input type="checkbox" id="espece-${e.id}" value="${e.id}" data-dans="${i}"${selection.has(e.id) ? " checked" : ""}>
+                  <button type="button" class="bouton-ecoute" data-son="${echapper(e.sons[0])}" aria-label="Écouter : ${echapper(e.nom)}">${icone("lecture", "icone--plein")}</button>
+                  <label for="espece-${e.id}">${echapper(e.nom)}</label>
+                  ${e.sons.length > 1 ? `<span class="espece-sons">${e.sons.length} sons</span>` : ""}
                 </li>`
                 )
                 .join("")}
@@ -265,6 +289,8 @@
         cocher(casesEspeces.filter((x) => x.dataset.dans === c.dataset.groupe && estVisible(x)), c.checked);
       }
     });
+
+    brancherBoutonsSon(ecran);
 
     ecran.addEventListener("click", (e) => {
       const action = e.target.closest("[data-action]")?.dataset.action;
@@ -481,29 +507,9 @@
           : ""
       }`);
 
-    // Un seul lecteur partagé pour réécouter les sons.
-    const audio = new Audio();
-    let boutonActif = null;
-    const majBouton = () => {
-      if (boutonActif) boutonActif.innerHTML = icone(audio.paused ? "lecture" : "pause", "icone--plein");
-    };
-    audio.addEventListener("play", majBouton);
-    audio.addEventListener("pause", majBouton);
-    nettoyages.push(() => {
-      audio.pause();
-      audio.removeAttribute("src");
-    });
+    brancherBoutonsSon(ecran);
 
     ecran.addEventListener("click", (e) => {
-      const boutonSon = e.target.closest("[data-son]");
-      if (boutonSon) {
-        if (boutonSon === boutonActif && !audio.paused) return audio.pause();
-        if (boutonActif && boutonActif !== boutonSon) boutonActif.innerHTML = icone("lecture", "icone--plein");
-        if (boutonSon !== boutonActif) audio.src = boutonSon.dataset.son;
-        boutonActif = boutonSon;
-        audio.play().catch(() => {});
-        return;
-      }
       const action = e.target.closest("[data-action]")?.dataset.action;
       if (action === "rejouer") {
         session = new window.SessionQuiz(quiz, session.especes);
