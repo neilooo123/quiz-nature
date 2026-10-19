@@ -504,6 +504,36 @@ input[type="checkbox"]:indeterminate::before {
   flex: 1 1 240px;
 }
 
+.categorie + .categorie {
+  margin-top: 32px;
+}
+
+.categorie-entete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--bordure);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.categorie-entete label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.categorie-entete .compte {
+  color: var(--texte-discret);
+  font-size: 13px;
+  font-weight: 400;
+}
+
 .groupes {
   columns: 260px;
   column-gap: 16px;

@@ -4,6 +4,10 @@ Lit les MP3 de sources/ (format « NN Nom de l'oiseau.mp3 »), corrige les noms,
 copie les fichiers dans media/oiseaux/chants/ avec des noms sans accent ni espace,
 puis écrit la liste des espèces dans data/oiseaux-chants.js.
 
+Chaque sous-dossier de sources/ devient une section de l'écran de sélection
+(nom du dossier) ; les MP3 posés directement dans sources/ vont dans la
+section « categorie_racine » de corrections-noms.json.
+
 Utilisation (depuis la racine du projet) :
     python tools/generer-chants.py
 """
@@ -65,6 +69,15 @@ def groupe_de(nom):
     return mot[:1].upper() + mot[1:]
 
 
+def nom_categorie(dossier, reglages):
+    if dossier == DOSSIER_SOURCES:
+        return reglages.get("categorie_racine", "Autres")
+    # « Oiseaux d_eau - Limicoles-20261019T162544Z-1-001 » -> « Oiseaux d'eau - Limicoles »
+    nom = re.sub(r"-\d{8}T\d{6}Z(-\d+)*$", "", nfc(dossier.name)).replace("_", "'")
+    nom = reglages.get("categories", {}).get(nom, nom)
+    return nom.replace("'", "’")
+
+
 def main():
     sys.stdout.reconfigure(errors="replace")
 
@@ -75,7 +88,11 @@ def main():
     corrections = {nfc(k): nfc(v) for k, v in reglages.get("corrections", {}).items()}
     a_ignorer = {nfc(n) for n in reglages.get("ignorer", [])}
 
-    fichiers = sorted(DOSSIER_SOURCES.glob("*.mp3"), key=lambda f: cle_tri(f.name))
+    racine = reglages.get("categorie_racine", "Autres")
+    fichiers = sorted(
+        DOSSIER_SOURCES.rglob("*.mp3"),
+        key=lambda f: (cle_tri(f.name), cle_tri(str(f.relative_to(DOSSIER_SOURCES)))),
+    )
     especes = {}
     ignores = []
     corrections_utilisees = set()
@@ -90,7 +107,14 @@ def main():
         nom = nom_affiche(brut, corrections)
         identifiant = slugifier(nom)
         espece = especes.setdefault(
-            identifiant, {"id": identifiant, "nom": nom, "groupe": groupe_de(nom), "sources": []}
+            identifiant,
+            {
+                "id": identifiant,
+                "nom": nom,
+                "groupe": groupe_de(nom),
+                "categorie": nom_categorie(fichier.parent, reglages),
+                "sources": [],
+            },
         )
         espece["sources"].append(fichier)
 
@@ -113,9 +137,13 @@ def main():
     for fichier in obsoletes:
         fichier.unlink()
 
-    liste = sorted(especes.values(), key=lambda e: cle_tri(e["nom"]))
+    # Section des fichiers posés à la racine en premier, puis les autres par ordre alphabétique.
+    liste = sorted(
+        especes.values(),
+        key=lambda e: (e["categorie"] != racine, cle_tri(e["categorie"]), cle_tri(e["nom"])),
+    )
     lignes = [
-        json.dumps({k: e[k] for k in ("id", "nom", "groupe", "sons")}, ensure_ascii=False)
+        json.dumps({k: e[k] for k in ("id", "nom", "groupe", "categorie", "sons")}, ensure_ascii=False)
         for e in liste
     ]
     FICHIER_DONNEES.parent.mkdir(parents=True, exist_ok=True)
@@ -129,6 +157,8 @@ def main():
     nb_sons = sum(len(e["sons"]) for e in liste)
     print(f"{len(fichiers)} fichiers MP3 trouvés dans sources/")
     print(f"{nb_sons} sons retenus pour {len(liste)} espèces ({nb_copies} copiés, {len(obsoletes)} obsolètes supprimés)")
+    for categorie in dict.fromkeys(e["categorie"] for e in liste):
+        print(f"  section « {categorie} » : {sum(e['categorie'] == categorie for e in liste)} espèces")
     for nom_fichier in ignores:
         print(f"  ignoré : {nom_fichier}")
     for espece in liste:

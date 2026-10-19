@@ -26,8 +26,10 @@ puis ouvrir http://localhost:8000.
 ## Ajouter ou modifier des chants d'oiseaux
 
 1. Déposer les MP3 dans `sources/` (nom de fichier : `NN Nom de l'oiseau.mp3`, par ex. `12 Fauvette des jardins.mp3`).
+   Chaque sous-dossier de `sources/` devient une section de l'écran de sélection (ex. « Oiseaux d'eau et limicoles ») ;
+   les MP3 posés directement dans `sources/` vont dans « Passereaux et autres ».
    Le dossier `sources/` n'est pas envoyé sur GitHub.
-2. Si besoin, corriger un nom ou ignorer un fichier dans `tools/corrections-noms.json`.
+2. Si besoin, corriger un nom, ignorer un fichier ou renommer une section dans `tools/corrections-noms.json`.
 3. Lancer le script, qui copie les sons dans `media/` et met à jour `data/oiseaux-chants.js` :
 
    ```bash

@@ -177,13 +177,51 @@
     return groupes;
   }
 
+  // Sections (catégories de sons) dans l'ordre des données, chacune découpée en groupes.
+  function decouperEnSections(especes) {
+    const parCategorie = new Map();
+    especes.forEach((e) => {
+      const nom = e.categorie || "";
+      if (!parCategorie.has(nom)) parCategorie.set(nom, []);
+      parCategorie.get(nom).push(e);
+    });
+    return [...parCategorie.entries()].map(([nom, liste]) => ({ nom, groupes: grouperEspeces(liste) }));
+  }
+
   function ecranSelection(taxon, quiz) {
     const L = quiz.libelles;
     const especes = especesDu(quiz);
     const cleStockage = "quiz-nature:selection:" + quiz.id;
     const existantes = new Set(especes.map((e) => e.id));
     const selection = new Set(stockage.lire(cleStockage, []).filter((id) => existantes.has(id)));
-    const groupes = grouperEspeces(especes);
+    const sections = decouperEnSections(especes);
+    const avecTitres = sections.length > 1;
+    let numeroGroupe = 0;
+
+    const htmlGroupe = (groupe, s) => {
+      const i = numeroGroupe++;
+      return `
+          <div class="groupe" role="group" aria-labelledby="groupe-${i}">
+            <label class="groupe-entete">
+              <input type="checkbox" data-groupe="${i}">
+              <span id="groupe-${i}">${echapper(groupe.nom)}</span>
+              <span class="compte" data-compte="${i}"></span>
+            </label>
+            <ul>
+              ${groupe.especes
+                .map(
+                  (e) => `
+                <li class="espece" data-cle="${echapper(normaliser(e.nom))}">
+                  <input type="checkbox" id="espece-${e.id}" value="${e.id}" data-dans="${i}" data-section="${s}"${selection.has(e.id) ? " checked" : ""}>
+                  <button type="button" class="bouton-ecoute" data-son="${echapper(e.sons[0])}" aria-label="Écouter : ${echapper(e.nom)}">${icone("lecture", "icone--plein")}</button>
+                  <label for="espece-${e.id}">${echapper(e.nom)}</label>
+                  ${e.sons.length > 1 ? `<span class="espece-sons">${e.sons.length} sons</span>` : ""}
+                </li>`
+                )
+                .join("")}
+            </ul>
+          </div>`;
+    };
 
     const ecran = afficher(`
       ${enteteDePage(quiz.nom, `Coche les ${L.pluriel} sur lesquels portera le quiz.`)}
@@ -196,33 +234,22 @@
         <button type="button" class="bouton bouton--contour" data-action="tout-decocher">Tout décocher</button>
       </div>
       <p class="vide" data-aucun hidden>Aucun ${echapper(L.singulier)} ne correspond à ta recherche.</p>
-      <div class="groupes">
-        ${groupes
-          .map(
-            (groupe, i) => `
-          <div class="groupe" role="group" aria-labelledby="groupe-${i}">
-            <label class="groupe-entete">
-              <input type="checkbox" data-groupe="${i}">
-              <span id="groupe-${i}">${echapper(groupe.nom)}</span>
-              <span class="compte" data-compte="${i}"></span>
-            </label>
-            <ul>
-              ${groupe.especes
-                .map(
-                  (e) => `
-                <li class="espece" data-cle="${echapper(normaliser(e.nom))}">
-                  <input type="checkbox" id="espece-${e.id}" value="${e.id}" data-dans="${i}"${selection.has(e.id) ? " checked" : ""}>
-                  <button type="button" class="bouton-ecoute" data-son="${echapper(e.sons[0])}" aria-label="Écouter : ${echapper(e.nom)}">${icone("lecture", "icone--plein")}</button>
-                  <label for="espece-${e.id}">${echapper(e.nom)}</label>
-                  ${e.sons.length > 1 ? `<span class="espece-sons">${e.sons.length} sons</span>` : ""}
-                </li>`
-                )
-                .join("")}
-            </ul>
-          </div>`
-          )
-          .join("")}
-      </div>
+      ${sections
+        .map(
+          (section, s) => `
+        <section class="categorie">
+          ${
+            avecTitres
+              ? `<h2 class="categorie-entete">
+                  <label><input type="checkbox" data-section-case="${s}">${echapper(section.nom)}</label>
+                  <span class="compte" data-compte-section="${s}"></span>
+                </h2>`
+              : ""
+          }
+          <div class="groupes">${section.groupes.map((groupe) => htmlGroupe(groupe, s)).join("")}</div>
+        </section>`
+        )
+        .join("")}
       <div class="barre-bas">
         <div class="conteneur barre-bas-contenu">
           <div class="barre-bas-info" aria-live="polite">
@@ -235,6 +262,7 @@
 
     const casesEspeces = [...ecran.querySelectorAll("input[data-dans]")];
     const casesGroupes = [...ecran.querySelectorAll("input[data-groupe]")];
+    const casesSections = [...ecran.querySelectorAll("input[data-section-case]")];
     const filtre = ecran.querySelector("[data-filtre]");
     const boutonCommencer = ecran.querySelector('[data-action="commencer"]');
 
@@ -248,14 +276,29 @@
       mettreAJour();
     }
 
+    // Case d'un groupe ou d'une section : cochée, à moitié (tiret) ou vide.
+    function majCaseParente(caseParente, dedans, compte) {
+      const nb = dedans.filter((c) => c.checked).length;
+      caseParente.checked = nb === dedans.length;
+      caseParente.indeterminate = nb > 0 && nb < dedans.length;
+      compte.textContent = `${nb} / ${dedans.length}`;
+    }
+
     function mettreAJour() {
-      casesGroupes.forEach((caseGroupe) => {
-        const dedans = casesEspeces.filter((c) => c.dataset.dans === caseGroupe.dataset.groupe);
-        const nb = dedans.filter((c) => c.checked).length;
-        caseGroupe.checked = nb === dedans.length;
-        caseGroupe.indeterminate = nb > 0 && nb < dedans.length;
-        ecran.querySelector(`[data-compte="${caseGroupe.dataset.groupe}"]`).textContent = `${nb} / ${dedans.length}`;
-      });
+      casesGroupes.forEach((c) =>
+        majCaseParente(
+          c,
+          casesEspeces.filter((x) => x.dataset.dans === c.dataset.groupe),
+          ecran.querySelector(`[data-compte="${c.dataset.groupe}"]`)
+        )
+      );
+      casesSections.forEach((c) =>
+        majCaseParente(
+          c,
+          casesEspeces.filter((x) => x.dataset.section === c.dataset.sectionCase),
+          ecran.querySelector(`[data-compte-section="${c.dataset.sectionCase}"]`)
+        )
+      );
       const nb = selection.size;
       ecran.querySelector("[data-compteur]").innerHTML =
         `Sélection : <strong>${nb}</strong> / ${especes.length} ${echapper(L.pluriel)}`;
@@ -278,6 +321,9 @@
         groupe.hidden = nb === 0;
         total += nb;
       });
+      ecran.querySelectorAll(".categorie").forEach((section) => {
+        section.hidden = !section.querySelector(".groupe:not([hidden])");
+      });
       ecran.querySelector("[data-aucun]").hidden = total > 0;
     });
 
@@ -287,6 +333,8 @@
         cocher([c], c.checked);
       } else if (c.matches("input[data-groupe]")) {
         cocher(casesEspeces.filter((x) => x.dataset.dans === c.dataset.groupe && estVisible(x)), c.checked);
+      } else if (c.matches("input[data-section-case]")) {
+        cocher(casesEspeces.filter((x) => x.dataset.section === c.dataset.sectionCase && estVisible(x)), c.checked);
       }
     });
 
@@ -376,7 +424,9 @@
       { focusTitre: false }
     );
     const carte = ecran.querySelector("[data-carte]");
-    const options = session.especes.map((e) => ({ valeur: e.id, libelle: e.nom }));
+    const options = session.especes
+      .map((e) => ({ valeur: e.id, libelle: e.nom }))
+      .sort((a, b) => normaliser(a.libelle).localeCompare(normaliser(b.libelle)));
     let lecteur = null;
     let combobox = null;
 

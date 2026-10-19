@@ -1,10 +1,29 @@
 {
-  "_aide": "Clés = nom du fichier sans le numéro ni « .mp3 » ; valeurs = nom affiché dans le quiz. « ignorer » = fichiers non utilisés.",
+  "_aide": "corrections : clé = nom du fichier sans le numéro ni « .mp3 », valeur = nom affiché. ignorer : fichiers non utilisés. categories : nom de dossier -> nom de section ; categorie_racine : section des MP3 posés directement dans sources/.",
+  "categorie_racine": "Passereaux et autres",
+  "categories": {
+    "Oiseaux d'eau - Limicoles": "Oiseaux d'eau et limicoles"
+  },
   "ignorer": [
     "Pipit maritime et Pipit spioncell",
     "Corneille noire_Corneille mantelé"
   ],
   "corrections": {
+    "Bécaseau minute": "Bécasseau minute",
+    "Bécaseau sanderling": "Bécasseau sanderling",
+    "Bécassine de marais": "Bécassine des marais",
+    "Bernache du canada": "Bernache du Canada",
+    "Chavalier gambette": "Chevalier gambette",
+    "Echasse blanche": "Échasse blanche",
+    "Erismature à tête blanche": "Érismature à tête blanche",
+    "Foulque caronculé": "Foulque caronculée",
+    "Garrot à oeil d_or": "Garrot à œil d'or",
+    "Grèbe à coup noir": "Grèbe à cou noir",
+    "Heron crabier": "Héron crabier",
+    "Heron garde boeufs": "Héron garde-bœufs",
+    "Macreuse noir": "Macreuse noire",
+    "Tadorn de Belon": "Tadorne de Belon",
+    "Tadorne de casarca": "Tadorne casarca",
     "Alouette hausse col": "Alouette haussecol",
     "Bec croisé bifascié": "Bec-croisé bifascié",
     "Bec croisé des sapins": "Bec-croisé des sapins",
