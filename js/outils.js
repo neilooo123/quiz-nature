@@ -15,6 +15,7 @@
     croix: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
     chevrons: '<path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/>',
     chevronDroite: '<path d="m9 18 6-6-6-6"/>',
+    chevronBas: '<path d="m6 9 6 6 6-6"/>',
     loupe: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
     lecture: '<polygon points="6 3 20 12 6 21 6 3"/>',
     pause: '<rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/>',

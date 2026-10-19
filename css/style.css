@@ -505,33 +505,88 @@ input[type="checkbox"]:indeterminate::before {
 }
 
 .categorie + .categorie {
-  margin-top: 32px;
+  margin-top: 16px;
 }
 
+/* Titre de section collé sous l'en-tête pendant le défilement, pour pouvoir replier à tout moment. */
 .categorie-entete {
+  position: sticky;
+  top: 57px;
+  z-index: 5;
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 12px;
+  align-items: center;
+  gap: 12px;
   margin-bottom: 14px;
-  padding-bottom: 10px;
   border-bottom: 1px solid var(--bordure);
+  background: var(--fond);
+}
+
+.categorie-entete h2 {
+  flex: 1;
+  min-width: 0;
   font-size: 19px;
   font-weight: 700;
   letter-spacing: -0.01em;
 }
 
-.categorie-entete label {
-  display: inline-flex;
+.categorie-bascule {
+  display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
   cursor: pointer;
 }
 
-.categorie-entete .compte {
+.categorie-titre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 12px;
+  min-width: 0;
+}
+
+.categorie-titre .compte {
   color: var(--texte-discret);
   font-size: 13px;
   font-weight: 400;
+}
+
+.categorie-chevron {
+  margin-left: auto;
+  color: var(--texte-discret);
+  font-size: 20px;
+  transition: transform 0.15s;
+}
+
+.categorie--repliee .categorie-chevron {
+  transform: rotate(-90deg);
+}
+
+.categorie--repliee .categorie-entete {
+  margin-bottom: 0;
+}
+
+.categorie--repliee .groupes {
+  display: none;
+}
+
+/* Pendant une recherche, toutes les sections montrent leurs résultats. */
+.ecran--recherche .categorie--repliee .categorie-entete {
+  margin-bottom: 14px;
+}
+
+.ecran--recherche .categorie--repliee .categorie-chevron {
+  transform: none;
+}
+
+.ecran--recherche .categorie--repliee .groupes {
+  display: block;
 }
 
 .groupes {
@@ -1069,6 +1124,10 @@ input[type="checkbox"]:indeterminate::before {
 
   .pied-contenu {
     text-align: left;
+  }
+
+  .categorie-entete h2 {
+    font-size: 17px;
   }
 
   .carte-jeu {

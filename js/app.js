@@ -196,6 +196,9 @@
     const selection = new Set(stockage.lire(cleStockage, []).filter((id) => existantes.has(id)));
     const sections = decouperEnSections(especes);
     const avecTitres = sections.length > 1;
+    // Sections dépliées (repliées par défaut pour garder la liste courte sur téléphone).
+    const cleOuvertes = "quiz-nature:sections-ouvertes:" + quiz.id;
+    const ouvertes = new Set(stockage.lire(cleOuvertes, []));
     let numeroGroupe = 0;
 
     const htmlGroupe = (groupe, s) => {
@@ -237,16 +240,24 @@
       ${sections
         .map(
           (section, s) => `
-        <section class="categorie">
+        <section class="categorie${avecTitres && !ouvertes.has(section.nom) ? " categorie--repliee" : ""}" data-nom-section="${echapper(section.nom)}">
           ${
             avecTitres
-              ? `<h2 class="categorie-entete">
-                  <label><input type="checkbox" data-section-case="${s}">${echapper(section.nom)}</label>
-                  <span class="compte" data-compte-section="${s}"></span>
-                </h2>`
+              ? `<div class="categorie-entete">
+                  <input type="checkbox" data-section-case="${s}" aria-label="Tout cocher : ${echapper(section.nom)}">
+                  <h2>
+                    <button type="button" class="categorie-bascule" data-bascule aria-controls="section-${s}" aria-expanded="${ouvertes.has(section.nom)}">
+                      <span class="categorie-titre">
+                        <span>${echapper(section.nom)}</span>
+                        <span class="compte" data-compte-section="${s}"></span>
+                      </span>
+                      ${icone("chevronBas", "categorie-chevron")}
+                    </button>
+                  </h2>
+                </div>`
               : ""
           }
-          <div class="groupes">${section.groupes.map((groupe) => htmlGroupe(groupe, s)).join("")}</div>
+          <div class="groupes" id="section-${s}">${section.groupes.map((groupe) => htmlGroupe(groupe, s)).join("")}</div>
         </section>`
         )
         .join("")}
@@ -308,8 +319,30 @@
       stockage.ecrire(cleStockage, [...selection]);
     }
 
+    // Pendant une recherche, les sections repliées s'ouvrent pour montrer les résultats.
+    function majBascules() {
+      const recherche = ecran.classList.contains("ecran--recherche");
+      ecran.querySelectorAll("[data-bascule]").forEach((bouton) => {
+        const repliee = bouton.closest(".categorie").classList.contains("categorie--repliee");
+        bouton.setAttribute("aria-expanded", String(recherche || !repliee));
+      });
+    }
+
+    function basculer(section) {
+      const repliee = section.classList.toggle("categorie--repliee");
+      const nom = section.dataset.nomSection;
+      repliee ? ouvertes.delete(nom) : ouvertes.add(nom);
+      stockage.ecrire(cleOuvertes, [...ouvertes]);
+      majBascules();
+      // En repliant une longue section, ramène son titre à l'écran.
+      const haut = section.getBoundingClientRect().top - document.querySelector(".entete").offsetHeight;
+      if (repliee && haut < 0) window.scrollBy(0, haut - 8);
+    }
+
     filtre.addEventListener("input", () => {
       const mots = normaliser(filtre.value).split(" ").filter(Boolean);
+      ecran.classList.toggle("ecran--recherche", mots.length > 0);
+      majBascules();
       let total = 0;
       ecran.querySelectorAll(".groupe").forEach((groupe) => {
         let nb = 0;
@@ -341,6 +374,8 @@
     brancherBoutonsSon(ecran);
 
     ecran.addEventListener("click", (e) => {
+      const bascule = e.target.closest("[data-bascule]");
+      if (bascule) basculer(bascule.closest(".categorie"));
       const action = e.target.closest("[data-action]")?.dataset.action;
       if (action === "tout-cocher") cocher(casesEspeces.filter(estVisible), true);
       if (action === "tout-decocher") cocher(casesEspeces.filter(estVisible), false);
