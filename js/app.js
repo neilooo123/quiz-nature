@@ -135,7 +135,7 @@
         : `<div class="carte carte--inactive" aria-disabled="true">${contenu}</div>`;
     });
     afficher(`
-      ${enteteDePage("Choisis un taxon", "Sur quel groupe veux-tu t’entraîner ?")}
+      ${enteteDePage("Que veux-tu réviser ?", "Choisis un taxon ou le vocabulaire.")}
       <div class="grille-cartes">${cartes.join("")}</div>`);
   }
 
@@ -158,18 +158,23 @@
 
   // ---------- Écran 3 : sélection des espèces ----------
 
-  function grouperEspeces(especes) {
+  // Une entrée peut appartenir à plusieurs groupes (un mot de vocabulaire à plusieurs thèmes).
+  function grouperEspeces(especes, fusionnerSeules) {
     const parGroupe = new Map();
     especes.forEach((e) => {
-      if (!parGroupe.has(e.groupe)) parGroupe.set(e.groupe, []);
-      parGroupe.get(e.groupe).push(e);
+      (e.groupes || [e.groupe]).forEach((nom) => {
+        if (!parGroupe.has(nom)) parGroupe.set(nom, []);
+        parGroupe.get(nom).push(e);
+      });
     });
     const groupes = [];
     const seules = [];
     [...parGroupe.entries()]
       .sort(([a], [b]) => normaliser(a).localeCompare(normaliser(b)))
-      .forEach(([nom, liste]) => (liste.length > 1 ? groupes.push({ nom, especes: liste }) : seules.push(...liste)));
-    // Les genres à une seule espèce sont réunis pour éviter une multitude de petits blocs.
+      .forEach(([nom, liste]) =>
+        fusionnerSeules && liste.length === 1 ? seules.push(...liste) : groupes.push({ nom, especes: liste })
+      );
+    // Les genres d'oiseaux à une seule espèce sont réunis pour éviter une multitude de petits blocs.
     if (seules.length) {
       seules.sort((a, b) => normaliser(a.nom).localeCompare(normaliser(b.nom)));
       groupes.push({ nom: "Autres espèces", especes: seules });
@@ -178,14 +183,14 @@
   }
 
   // Sections (catégories de sons) dans l'ordre des données, chacune découpée en groupes.
-  function decouperEnSections(especes) {
+  function decouperEnSections(especes, fusionnerSeules) {
     const parCategorie = new Map();
     especes.forEach((e) => {
       const nom = e.categorie || "";
       if (!parCategorie.has(nom)) parCategorie.set(nom, []);
       parCategorie.get(nom).push(e);
     });
-    return [...parCategorie.entries()].map(([nom, liste]) => ({ nom, groupes: grouperEspeces(liste) }));
+    return [...parCategorie.entries()].map(([nom, liste]) => ({ nom, groupes: grouperEspeces(liste, fusionnerSeules) }));
   }
 
   function ecranSelection(taxon, quiz) {
@@ -194,11 +199,15 @@
     const cleStockage = "quiz-nature:selection:" + quiz.id;
     const existantes = new Set(especes.map((e) => e.id));
     const selection = new Set(stockage.lire(cleStockage, []).filter((id) => existantes.has(id)));
-    const sections = decouperEnSections(especes);
+    const sections = decouperEnSections(especes, quiz.type === "audio-saisie");
     const avecTitres = sections.length > 1;
     // Sections dépliées (repliées par défaut pour garder la liste courte sur téléphone).
     const cleOuvertes = "quiz-nature:sections-ouvertes:" + quiz.id;
     const ouvertes = new Set(stockage.lire(cleOuvertes, []));
+    const cleMode = "quiz-nature:mode:" + quiz.id;
+    const modeMemorise = stockage.lire(cleMode, null);
+    const modes = quiz.modes || [];
+    const modeParDefaut = modes.some((m) => m.id === modeMemorise) ? modeMemorise : modes[0]?.id;
     let numeroGroupe = 0;
 
     const htmlGroupe = (groupe, s) => {
@@ -215,10 +224,10 @@
                 .map(
                   (e) => `
                 <li class="espece" data-cle="${echapper(normaliser(e.nom))}">
-                  <input type="checkbox" id="espece-${e.id}" value="${e.id}" data-dans="${i}" data-section="${s}"${selection.has(e.id) ? " checked" : ""}>
-                  <button type="button" class="bouton-ecoute" data-son="${echapper(e.sons[0])}" aria-label="Écouter : ${echapper(e.nom)}">${icone("lecture", "icone--plein")}</button>
-                  <label for="espece-${e.id}">${echapper(e.nom)}</label>
-                  ${e.sons.length > 1 ? `<span class="espece-sons">${e.sons.length} sons</span>` : ""}
+                  <input type="checkbox" id="case-${i}-${e.id}" value="${e.id}" data-dans="${i}" data-section="${s}">
+                  ${e.sons ? `<button type="button" class="bouton-ecoute" data-son="${echapper(e.sons[0])}" aria-label="Écouter : ${echapper(e.nom)}">${icone("lecture", "icone--plein")}</button>` : ""}
+                  <label for="case-${i}-${e.id}">${echapper(e.nom)}</label>
+                  ${e.sons && e.sons.length > 1 ? `<span class="espece-sons">${e.sons.length} sons</span>` : ""}
                 </li>`
                 )
                 .join("")}
@@ -236,6 +245,21 @@
         <button type="button" class="bouton bouton--contour" data-action="tout-cocher">Tout cocher</button>
         <button type="button" class="bouton bouton--contour" data-action="tout-decocher">Tout décocher</button>
       </div>
+      ${
+        modes.length
+          ? `<fieldset class="choix-mode">
+              <legend>Type de questions</legend>
+              <div class="segments">
+                ${modes
+                  .map(
+                    (m) =>
+                      `<label class="segment"><input type="radio" name="mode" value="${m.id}"${m.id === modeParDefaut ? " checked" : ""}><span>${echapper(m.nom)}</span></label>`
+                  )
+                  .join("")}
+              </div>
+            </fieldset>`
+          : ""
+      }
       <p class="vide" data-aucun hidden>Aucun ${echapper(L.singulier)} ne correspond à ta recherche.</p>
       ${sections
         .map(
@@ -296,6 +320,8 @@
     }
 
     function mettreAJour() {
+      // Un même mot peut avoir une case dans plusieurs thèmes : toutes suivent la sélection.
+      casesEspeces.forEach((c) => (c.checked = selection.has(c.value)));
       casesGroupes.forEach((c) =>
         majCaseParente(
           c,
@@ -368,6 +394,8 @@
         cocher(casesEspeces.filter((x) => x.dataset.dans === c.dataset.groupe && estVisible(x)), c.checked);
       } else if (c.matches("input[data-section-case]")) {
         cocher(casesEspeces.filter((x) => x.dataset.section === c.dataset.sectionCase && estVisible(x)), c.checked);
+      } else if (c.name === "mode") {
+        stockage.ecrire(cleMode, c.value);
       }
     });
 
@@ -380,7 +408,10 @@
       if (action === "tout-cocher") cocher(casesEspeces.filter(estVisible), true);
       if (action === "tout-decocher") cocher(casesEspeces.filter(estVisible), false);
       if (action === "commencer") {
-        session = new window.SessionQuiz(quiz, especes.filter((x) => selection.has(x.id)));
+        session = new window.SessionQuiz(quiz, especes.filter((x) => selection.has(x.id)), {
+          mode: ecran.querySelector('input[name="mode"]:checked')?.value,
+          toutes: especes,
+        });
         location.hash = chemin(taxon.id, quiz.id, "jeu");
       }
     });
@@ -482,7 +513,12 @@
       const question = session.courante;
       ecran.querySelector("[data-numero]").textContent = `Question ${question.numero}`;
       majScore();
+      if (quiz.type === "vocabulaire") afficherDefinition(question);
+      else afficherSon(question);
+    }
 
+    // Quiz sonore : on écoute, on choisit le nom dans la combobox.
+    function afficherSon(question) {
       carte.innerHTML = `
         <h1 tabindex="-1">${echapper(L.question)}</h1>
         <div data-lecteur></div>
@@ -516,24 +552,97 @@
       combobox.focus();
     }
 
-    function valider() {
-      if (!combobox.valeur) return;
-      const question = session.repondre(combobox.valeur);
-      combobox.definirEtat(question.correcte ? "succes" : "erreur");
-      combobox.desactiver(true);
+    // Quiz de vocabulaire : on lit la définition, puis 4 propositions ou le mot à écrire.
+    function afficherDefinition(question) {
+      const qcm = question.mode === "qcm";
+      carte.innerHTML = `
+        <h1 tabindex="-1">${echapper(L.question)}</h1>
+        <blockquote class="definition">${echapper(question.espece.definition)}</blockquote>
+        <div class="zone-reponse">
+          ${
+            qcm
+              ? `<div class="choix" role="group" aria-label="Propositions">
+                  ${question.choix
+                    .map((c) => `<button type="button" class="choix-bouton" data-choix="${c.id}">${echapper(c.nom)}</button>`)
+                    .join("")}
+                </div>`
+              : `<label class="etiquette" for="saisie-reponse">Ta réponse</label>
+                <input type="text" class="champ-texte" id="saisie-reponse" data-saisie placeholder="${echapper(L.saisie)}"
+                  autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">`
+          }
+          <div data-retour aria-live="polite"></div>
+          <div class="actions" data-actions>
+            ${qcm ? "" : `<button type="button" class="bouton bouton--grand" data-action="valider-saisie" disabled>Valider</button>`}
+          </div>
+        </div>`;
+
+      if (qcm) return carte.querySelector("[data-choix]").focus();
+      const saisie = carte.querySelector("[data-saisie]");
+      saisie.addEventListener("input", () => {
+        carte.querySelector('[data-action="valider-saisie"]').disabled = !saisie.value.trim();
+      });
+      saisie.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") validerSaisie();
+      });
+      saisie.focus();
+    }
+
+    function afficherRetour(question) {
       const nom = `<b>${echapper(question.espece.nom)}</b>`;
+      // Accepté malgré une faute de frappe ou un accent oublié (les majuscules ne comptent pas).
+      const fauteOrthographe =
+        question.correcte &&
+        question.reponseTexte &&
+        question.reponseTexte.toLowerCase() !== question.espece.nom.toLowerCase();
+      const infos = [
+        question.espece.groupes ? `Thème : ${question.espece.groupes.map(echapper).join(", ")}` : "",
+        question.espece.source ? `Source : ${echapper(question.espece.source)}` : "",
+      ].filter(Boolean);
+      const meta = infos.length ? `<small class="alerte-meta">${infos.join(" · ")}</small>` : "";
       carte.querySelector("[data-retour]").innerHTML = question.correcte
-        ? `<div class="alerte alerte--succes">${icone("cercleCoche")}<div><strong>Bonne réponse !</strong>C’est bien : ${nom}</div></div>`
-        : `<div class="alerte alerte--erreur">${icone("cercleCroix")}<div><strong>Raté !</strong>C’était : ${nom}</div></div>`;
+        ? `<div class="alerte alerte--succes">${icone("cercleCoche")}<div><strong>Bonne réponse !</strong>C’est bien : ${nom}${
+            fauteOrthographe ? " (vérifie l’orthographe)" : ""
+          }${meta}</div></div>`
+        : `<div class="alerte alerte--erreur">${icone("cercleCroix")}<div><strong>Raté !</strong>C’était : ${nom}${meta}</div></div>`;
       carte.querySelector("[data-actions]").innerHTML =
         `<button type="button" class="bouton bouton--grand" data-action="suivant">Question suivante ${icone("flecheDroite")}</button>`;
       carte.querySelector('[data-action="suivant"]').focus();
       majScore();
     }
 
+    function valider() {
+      if (!combobox.valeur) return;
+      const question = session.repondre(combobox.valeur);
+      combobox.definirEtat(question.correcte ? "succes" : "erreur");
+      combobox.desactiver(true);
+      afficherRetour(question);
+    }
+
+    function choisir(id) {
+      const question = session.repondre(id);
+      carte.querySelectorAll("[data-choix]").forEach((bouton) => {
+        bouton.disabled = true;
+        if (bouton.dataset.choix === question.espece.id) bouton.classList.add("choix-bouton--juste");
+        else if (bouton.dataset.choix === id) bouton.classList.add("choix-bouton--faux");
+      });
+      afficherRetour(question);
+    }
+
+    function validerSaisie() {
+      const saisie = carte.querySelector("[data-saisie]");
+      if (!saisie.value.trim() || saisie.readOnly) return;
+      const question = session.repondreTexte(saisie.value);
+      saisie.readOnly = true;
+      saisie.classList.add(question.correcte ? "champ-texte--juste" : "champ-texte--faux");
+      afficherRetour(question);
+    }
+
     ecran.addEventListener("click", (e) => {
+      const choix = e.target.closest("[data-choix]");
+      if (choix && !choix.disabled) return choisir(choix.dataset.choix);
       const action = e.target.closest("[data-action]")?.dataset.action;
       if (action === "valider") valider();
+      if (action === "valider-saisie") validerSaisie();
       if (action === "suivant") afficherQuestion();
       if (action === "fin") {
         session.terminer();
@@ -562,9 +671,13 @@
       (q) => `
       <li class="recap-ligne${q.correcte ? " recap-ligne--juste" : ""}">
         <span class="recap-numero">${q.numero}</span>
-        <button type="button" class="bouton bouton--contour bouton--icone" data-son="${echapper(q.son)}" aria-label="Réécouter le son de la question ${q.numero}">${icone("lecture", "icone--plein")}</button>
-        <span>${echapper(q.espece.nom)}</span>
-        <span${q.correcte ? "" : ' class="recap-reponse--fausse"'}>${q.reponse ? echapper(q.reponse.nom) : "—"}</span>
+        ${
+          q.son
+            ? `<button type="button" class="bouton bouton--contour bouton--icone" data-son="${echapper(q.son)}" aria-label="Réécouter le son de la question ${q.numero}">${icone("lecture", "icone--plein")}</button>`
+            : "<span></span>"
+        }
+        <span>${echapper(q.espece.nom)}${q.espece.definition ? `<small class="recap-definition">${echapper(q.espece.definition)}</small>` : ""}</span>
+        <span${q.correcte ? "" : ' class="recap-reponse--fausse"'}>${echapper(q.reponse ? q.reponse.nom : q.reponseTexte || "—")}</span>
         <span class="recap-icone recap-icone--${q.correcte ? "juste" : "fausse"}" role="img" aria-label="${q.correcte ? "Juste" : "Faux"}">${icone(q.correcte ? "cercleCoche" : "cercleCroix")}</span>
       </li>`
     );
@@ -597,7 +710,7 @@
     ecran.addEventListener("click", (e) => {
       const action = e.target.closest("[data-action]")?.dataset.action;
       if (action === "rejouer") {
-        session = new window.SessionQuiz(quiz, session.especes);
+        session = new window.SessionQuiz(quiz, session.especes, session.options);
         location.hash = chemin(taxon.id, quiz.id, "jeu");
       }
       if (action === "modifier") location.hash = chemin(taxon.id, quiz.id);

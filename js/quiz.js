@@ -1,13 +1,17 @@
 // Moteur de quiz : tirage des questions, réponses et score.
-// Indépendant de l'affichage pour pouvoir servir aux futurs quiz (photos…).
+// Indépendant de l'affichage pour servir à tous les quiz (sons, vocabulaire…).
 
 (function () {
-  const { melanger, auHasard } = window.Outils;
+  const { melanger, auHasard, normaliser, distanceEdition } = window.Outils;
+  const NB_CHOIX = 4;
 
   class SessionQuiz {
-    constructor(quiz, especes) {
+    // options.mode : "qcm" (4 propositions), "saisie" (écrire le mot) ou "melange" ;
+    // options.toutes : toutes les entrées du quiz, où piocher les mauvaises propositions.
+    constructor(quiz, especes, options = {}) {
       this.quiz = quiz;
       this.especes = especes;
+      this.options = options;
       this.questions = []; // questions déjà répondues, dans l'ordre
       this.courante = null;
       this.terminee = false;
@@ -28,14 +32,28 @@
       return this.sac.pop();
     }
 
+    // La bonne réponse et 3 leurres, pris d'abord parmi les entrées qui partagent un thème.
+    tirerChoix(espece) {
+      const autres = (this.options.toutes || this.especes).filter((e) => e.id !== espece.id);
+      const themes = espece.groupes || [espece.groupe];
+      const proches = autres.filter((e) => (e.groupes || [e.groupe]).some((g) => themes.includes(g)));
+      const lointaines = autres.filter((e) => !proches.includes(e));
+      const leurres = melanger(proches).concat(melanger(lointaines)).slice(0, NB_CHOIX - 1);
+      return melanger([espece, ...leurres]);
+    }
+
     nouvelleQuestion() {
       const espece = this.tirerEspece();
+      const mode = this.options.mode === "melange" ? auHasard(["qcm", "saisie"]) : this.options.mode || null;
       this.derniere = espece;
       this.courante = {
         numero: this.questions.length + 1,
         espece,
-        son: auHasard(espece.sons),
-        reponse: null,
+        son: espece.sons ? auHasard(espece.sons) : null,
+        mode,
+        choix: mode === "qcm" ? this.tirerChoix(espece) : null,
+        reponse: null, // entrée choisie (liste ou propositions)
+        reponseTexte: null, // mot écrit
         correcte: null,
       };
       return this.courante;
@@ -44,8 +62,20 @@
     repondre(idEspece) {
       const question = this.courante;
       if (!question || question.correcte !== null) return question;
-      question.reponse = this.especes.find((e) => e.id === idEspece) || null;
+      question.reponse = (this.options.toutes || this.especes).find((e) => e.id === idEspece) || null;
       question.correcte = idEspece === question.espece.id;
+      this.questions.push(question);
+      return question;
+    }
+
+    // Accents, majuscules et tirets ignorés ; une faute de frappe tolérée dans les mots longs.
+    repondreTexte(texte) {
+      const question = this.courante;
+      if (!question || question.correcte !== null) return question;
+      const attendu = normaliser(question.espece.nom);
+      const donne = normaliser(texte);
+      question.reponseTexte = texte.trim();
+      question.correcte = donne === attendu || (attendu.length >= 6 && distanceEdition(donne, attendu) <= 1);
       this.questions.push(question);
       return question;
     }

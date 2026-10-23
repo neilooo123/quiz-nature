@@ -16,8 +16,9 @@ import json
 import re
 import shutil
 import sys
-import unicodedata
 from pathlib import Path
+
+from outils_texte import cle_tri, ecrire_donnees, nfc, slugifier
 
 RACINE = Path(__file__).resolve().parent.parent
 DOSSIER_SOURCES = RACINE / "sources"
@@ -28,21 +29,6 @@ CLE_DONNEES = "oiseaux-chants"
 
 # Mots ignorés pour former le groupe : « Grand Tétras » est rangé avec les « Tétras ».
 MOTS_IGNORES_GROUPE = {"grand", "grande", "petit", "petite"}
-
-
-def nfc(texte):
-    return unicodedata.normalize("NFC", texte)
-
-
-def slugifier(texte):
-    texte = texte.replace("œ", "oe").replace("Œ", "oe").replace("æ", "ae").replace("Æ", "ae")
-    texte = unicodedata.normalize("NFD", texte)
-    texte = "".join(c for c in texte if not unicodedata.combining(c))
-    return re.sub(r"[^a-z0-9]+", "-", texte.lower()).strip("-")
-
-
-def cle_tri(texte):
-    return slugifier(texte).replace("-", " ")
 
 
 def nom_brut(fichier):
@@ -142,16 +128,11 @@ def main():
         especes.values(),
         key=lambda e: (e["categorie"] != racine, cle_tri(e["categorie"]), cle_tri(e["nom"])),
     )
-    lignes = [
-        json.dumps({k: e[k] for k in ("id", "nom", "groupe", "categorie", "sons")}, ensure_ascii=False)
-        for e in liste
-    ]
-    FICHIER_DONNEES.parent.mkdir(parents=True, exist_ok=True)
-    FICHIER_DONNEES.write_text(
-        "// Fichier généré par tools/generer-chants.py : ne pas modifier à la main.\n"
-        "window.QUIZ_DONNEES = window.QUIZ_DONNEES || {};\n"
-        f'window.QUIZ_DONNEES["{CLE_DONNEES}"] = [\n  ' + ",\n  ".join(lignes) + "\n];\n",
-        encoding="utf-8",
+    ecrire_donnees(
+        FICHIER_DONNEES,
+        CLE_DONNEES,
+        [{k: e[k] for k in ("id", "nom", "groupe", "categorie", "sons")} for e in liste],
+        "tools/generer-chants.py",
     )
 
     nb_sons = sum(len(e["sons"]) for e in liste)

@@ -21,6 +21,8 @@
     pause: '<rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/>',
     rejouer: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
     flecheDroite: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+    livre:
+      '<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>',
     drapeau: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/>',
     cercleCoche: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
     cercleCroix: '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>',
@@ -45,6 +47,19 @@
       .replace(/[-'’_.,/]/g, " ")
       .replace(/\s+/g, " ")
       .trim();
+  }
+
+  // Nombre minimal de lettres à ajouter, enlever ou changer pour passer de a à b.
+  function distanceEdition(a, b) {
+    let precedente = Array.from({ length: b.length + 1 }, (_, j) => j);
+    for (let i = 1; i <= a.length; i++) {
+      const ligne = [i];
+      for (let j = 1; j <= b.length; j++) {
+        ligne[j] = Math.min(precedente[j] + 1, ligne[j - 1] + 1, precedente[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      }
+      precedente = ligne;
+    }
+    return precedente[b.length];
   }
 
   function echapper(texte) {
@@ -93,5 +108,5 @@
     },
   };
 
-  window.Outils = { icone, normaliser, echapper, melanger, auHasard, formaterDuree, stockage };
+  window.Outils = { icone, normaliser, distanceEdition, echapper, melanger, auHasard, formaterDuree, stockage };
 })();

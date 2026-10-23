@@ -46,6 +46,18 @@ puis ouvrir http://localhost:8000.
 
    Le site se met à jour en une à deux minutes.
 
+## Ajouter du vocabulaire
+
+1. Ouvrir `data/vocabulaire.tsv` et coller les lignes du tableur à la suite : 4 colonnes séparées par des
+   tabulations, **Nom**, **Définition**, **Thème** (plusieurs thèmes séparés par « ; »), **Sources**.
+2. Lancer le script, qui met à jour `data/vocabulaire.js` :
+
+   ```bash
+   python tools/generer-vocabulaire.py
+   ```
+
+3. Publier comme pour les chants (`git add -A`, `git commit`, `git push`).
+
 ## Ajouter un quiz
 
 - Décrire le quiz dans `js/catalogue.js` (taxon, nom, type, fichier de données).
@@ -63,3 +75,4 @@ puis ouvrir http://localhost:8000.
 | `js/combobox.js` | Liste déroulante avec recherche (style shadcn/ui) |
 | `js/outils.js` | Fonctions partagées (icônes, recherche sans accents…) |
 | `tools/generer-chants.py` | Préparation des sons et des données |
+| `tools/generer-vocabulaire.py` | Préparation du vocabulaire (`data/vocabulaire.tsv` → `data/vocabulaire.js`) |

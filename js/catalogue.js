@@ -4,6 +4,8 @@
 //
 // Types de quiz :
 //   "audio-saisie" : on écoute un son et on choisit le nom dans une combobox.
+//   "vocabulaire"  : on lit une définition et on retrouve le mot, parmi 4 propositions
+//                    ou en l'écrivant (« modes » proposés avant de commencer).
 
 window.CATALOGUE = [
   {
@@ -26,6 +28,33 @@ window.CATALOGUE = [
           choisir: "Choisir un oiseau…",
           rechercher: "Rechercher un oiseau…",
           aucun: "Aucun oiseau trouvé.",
+        },
+      },
+    ],
+  },
+  {
+    id: "vocabulaire",
+    nom: "Vocabulaire",
+    description: "Les mots des naturalistes et leurs définitions.",
+    icone: "livre",
+    quiz: [
+      {
+        id: "vocabulaire-nature",
+        nom: "Vocabulaire nature",
+        description: "Lis la définition et retrouve le mot.",
+        type: "vocabulaire",
+        donnees: "vocabulaire",
+        icone: "livre",
+        modes: [
+          { id: "qcm", nom: "4 propositions" },
+          { id: "saisie", nom: "Écrire le mot" },
+          { id: "melange", nom: "Les deux" },
+        ],
+        libelles: {
+          singulier: "mot",
+          pluriel: "mots",
+          question: "Quel est ce mot ?",
+          saisie: "Écris le mot…",
         },
       },
     ],
