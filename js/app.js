@@ -582,7 +582,11 @@
         carte.querySelector('[data-action="valider-saisie"]').disabled = !saisie.value.trim();
       });
       saisie.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") validerSaisie();
+        if (e.key !== "Enter") return;
+        // Sans cela, la même touche Entrée « clique » ensuite sur « Question suivante »,
+        // qui vient de prendre le focus, et le résultat disparaît aussitôt.
+        e.preventDefault();
+        validerSaisie();
       });
       saisie.focus();
     }
