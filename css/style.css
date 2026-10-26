@@ -768,6 +768,19 @@ input[type="checkbox"]:indeterminate::before {
   margin-top: 16px;
 }
 
+/* Quiz en images : carte plus large pour lire la légende */
+.carte-jeu--large {
+  max-width: 760px;
+}
+
+.image-question {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+}
+
 /* Quiz de vocabulaire */
 .definition {
   margin: 0;
@@ -1258,6 +1271,18 @@ input[type="checkbox"]:indeterminate::before {
   font-size: 18px;
 }
 
+.recap--images .recap-ligne {
+  grid-template-columns: 32px 72px 1fr 1fr 24px;
+}
+
+.recap-vignette {
+  display: block;
+  width: 72px;
+  height: auto;
+  border: 1px solid var(--bordure);
+  border-radius: 4px;
+}
+
 .recap-definition {
   display: block;
   margin-top: 2px;
@@ -1308,6 +1333,10 @@ input[type="checkbox"]:indeterminate::before {
       "lecture bonne icone"
       "lecture donnee icone";
     row-gap: 2px;
+  }
+
+  .recap--images .recap-ligne {
+    grid-template-columns: 72px 1fr 24px;
   }
 
   .recap-entete {

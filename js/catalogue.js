@@ -6,6 +6,8 @@
 //   "audio-saisie" : on écoute un son et on choisit le nom dans une combobox.
 //   "vocabulaire"  : on lit une définition et on retrouve le mot, parmi 4 propositions
 //                    ou en l'écrivant (« modes » proposés avant de commencer).
+//   "image-qcm"    : on regarde une image (carte de répartition…) et on choisit
+//                    le nom parmi 4 propositions.
 
 window.CATALOGUE = [
   {
@@ -62,9 +64,26 @@ window.CATALOGUE = [
   {
     id: "mammiferes",
     nom: "Mammifères",
-    description: "Traces, silhouettes et cris des mammifères.",
+    description: "Chauves-souris et autres mammifères de France.",
     icone: "patte",
-    quiz: [],
+    quiz: [
+      {
+        id: "chiropteres-repartition",
+        nom: "Répartition des chiroptères",
+        description: "Observe la carte de répartition en France et retrouve la chauve-souris.",
+        type: "image-qcm",
+        mode: "qcm",
+        donnees: "chiropteres-repartition",
+        icone: "carte",
+        libelles: {
+          singulier: "chauve-souris",
+          pluriel: "chauves-souris",
+          feminin: true,
+          question: "Quelle chauve-souris a cette répartition ?",
+          image: "Carte de répartition en France de l’espèce à trouver",
+        },
+      },
+    ],
   },
   {
     id: "lepidopteres",

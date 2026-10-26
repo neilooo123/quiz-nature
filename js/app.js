@@ -72,6 +72,11 @@
     return app.firstElementChild;
   }
 
+  // Accord des libellés : « les oiseaux sélectionnés » / « les chauves-souris sélectionnées ».
+  function accord(quiz, masculin, feminin) {
+    return quiz.libelles.feminin ? feminin : masculin;
+  }
+
   function enteteDePage(titre, sousTitre) {
     return `<div class="titre-page"><h1 tabindex="-1">${echapper(titre)}</h1><p>${echapper(sousTitre)}</p></div>`;
   }
@@ -199,7 +204,7 @@
     const cleStockage = "quiz-nature:selection:" + quiz.id;
     const existantes = new Set(especes.map((e) => e.id));
     const selection = new Set(stockage.lire(cleStockage, []).filter((id) => existantes.has(id)));
-    const sections = decouperEnSections(especes, quiz.type === "audio-saisie");
+    const sections = decouperEnSections(especes, quiz.type !== "vocabulaire");
     const avecTitres = sections.length > 1;
     // Sections dépliées (repliées par défaut pour garder la liste courte sur téléphone).
     const cleOuvertes = "quiz-nature:sections-ouvertes:" + quiz.id;
@@ -236,7 +241,7 @@
     };
 
     const ecran = afficher(`
-      ${enteteDePage(quiz.nom, `Coche les ${L.pluriel} sur lesquels portera le quiz.`)}
+      ${enteteDePage(quiz.nom, `Coche les ${L.pluriel} sur ${accord(quiz, "lesquels", "lesquelles")} portera le quiz.`)}
       <div class="barre-outils">
         <label class="champ">
           ${icone("loupe")}
@@ -260,7 +265,7 @@
             </fieldset>`
           : ""
       }
-      <p class="vide" data-aucun hidden>Aucun ${echapper(L.singulier)} ne correspond à ta recherche.</p>
+      <p class="vide" data-aucun hidden>${accord(quiz, "Aucun", "Aucune")} ${echapper(L.singulier)} ne correspond à ta recherche.</p>
       ${sections
         .map(
           (section, s) => `
@@ -409,7 +414,7 @@
       if (action === "tout-decocher") cocher(casesEspeces.filter(estVisible), false);
       if (action === "commencer") {
         session = new window.SessionQuiz(quiz, especes.filter((x) => selection.has(x.id)), {
-          mode: ecran.querySelector('input[name="mode"]:checked')?.value,
+          mode: ecran.querySelector('input[name="mode"]:checked')?.value || quiz.mode,
           toutes: especes,
         });
         location.hash = chemin(taxon.id, quiz.id, "jeu");
@@ -486,7 +491,7 @@
         </div>
         <button type="button" class="bouton bouton--danger bouton--petit" data-action="fin">${icone("drapeau")} Mettre fin au quiz</button>
       </div>
-      <section class="carte-jeu" data-carte></section>`,
+      <section class="carte-jeu${quiz.type === "image-qcm" ? " carte-jeu--large" : ""}" data-carte></section>`,
       { focusTitre: false }
     );
     const carte = ecran.querySelector("[data-carte]");
@@ -514,7 +519,31 @@
       ecran.querySelector("[data-numero]").textContent = `Question ${question.numero}`;
       majScore();
       if (quiz.type === "vocabulaire") afficherDefinition(question);
+      else if (quiz.type === "image-qcm") afficherImage(question);
       else afficherSon(question);
+    }
+
+    function htmlChoix(question) {
+      return `<div class="choix" role="group" aria-label="Propositions">
+        ${question.choix
+          .map((c) => `<button type="button" class="choix-bouton" data-choix="${c.id}">${echapper(c.nom)}</button>`)
+          .join("")}
+      </div>`;
+    }
+
+    // Quiz en images : une image (ex. carte de répartition), 4 propositions.
+    function afficherImage(question) {
+      carte.innerHTML = `
+        <h1 tabindex="-1">${echapper(L.question)}</h1>
+        <a href="${echapper(question.espece.image)}" target="_blank" rel="noopener" title="Ouvrir l’image en grand">
+          <img class="image-question" src="${echapper(question.espece.image)}" alt="${echapper(L.image)}">
+        </a>
+        <div class="zone-reponse">
+          ${htmlChoix(question)}
+          <div data-retour aria-live="polite"></div>
+          <div class="actions" data-actions></div>
+        </div>`;
+      carte.querySelector("[data-choix]").focus({ preventScroll: true });
     }
 
     // Quiz sonore : on écoute, on choisit le nom dans la combobox.
@@ -561,11 +590,7 @@
         <div class="zone-reponse">
           ${
             qcm
-              ? `<div class="choix" role="group" aria-label="Propositions">
-                  ${question.choix
-                    .map((c) => `<button type="button" class="choix-bouton" data-choix="${c.id}">${echapper(c.nom)}</button>`)
-                    .join("")}
-                </div>`
+              ? htmlChoix(question)
               : `<label class="etiquette" for="saisie-reponse">Ta réponse</label>
                 <input type="text" class="champ-texte" id="saisie-reponse" data-saisie placeholder="${echapper(L.saisie)}"
                   autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">`
@@ -678,7 +703,9 @@
         ${
           q.son
             ? `<button type="button" class="bouton bouton--contour bouton--icone" data-son="${echapper(q.son)}" aria-label="Réécouter le son de la question ${q.numero}">${icone("lecture", "icone--plein")}</button>`
-            : "<span></span>"
+            : q.espece.image
+              ? `<a href="${echapper(q.espece.image)}" target="_blank" rel="noopener"><img class="recap-vignette" src="${echapper(q.espece.image)}" alt="Image de la question ${q.numero}"></a>`
+              : "<span></span>"
         }
         <span>${echapper(q.espece.nom)}${q.espece.definition ? `<small class="recap-definition">${echapper(q.espece.definition)}</small>` : ""}</span>
         <span${q.correcte ? "" : ' class="recap-reponse--fausse"'}>${echapper(q.reponse ? q.reponse.nom : q.reponseTexte || "—")}</span>
@@ -687,7 +714,7 @@
     );
 
     const ecran = afficher(`
-      ${enteteDePage("Résumé du quiz", `${quiz.nom} · ${nbEspeces} ${nbEspeces > 1 ? quiz.libelles.pluriel : quiz.libelles.singulier} sélectionnés`)}
+      ${enteteDePage("Résumé du quiz", `${quiz.nom} · ${nbEspeces} ${quiz.libelles.pluriel} ${accord(quiz, "sélectionnés", "sélectionnées")}`)}
       <div class="score">
         <div class="score-valeur">${score}<small> / ${total}</small></div>
         <div class="score-texte">
@@ -702,7 +729,7 @@
       </div>
       ${
         total
-          ? `<ol class="recap">
+          ? `<ol class="recap${quiz.type === "image-qcm" ? " recap--images" : ""}">
               <li class="recap-ligne recap-entete" aria-hidden="true"><span>N°</span><span></span><span>Bonne réponse</span><span>Ta réponse</span><span></span></li>
               ${lignes.join("")}
             </ol>`

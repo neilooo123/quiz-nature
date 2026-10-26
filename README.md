@@ -58,6 +58,20 @@ puis ouvrir http://localhost:8000.
 
 3. Publier comme pour les chants (`git add -A`, `git commit`, `git push`).
 
+## Ajouter des cartes de répartition de chiroptères
+
+1. Déposer les images dans `sources chiroptère/Chiroptère répartition/`, une par espèce, nommée par le nom de
+   l'espèce (ex. `Grand rhinolophe.png`). Ce dossier n'est pas envoyé sur GitHub.
+2. Lancer le script (il faut Pillow, à installer une seule fois avec `python -m pip install pillow`) :
+
+   ```bash
+   python tools/generer-cartes-chiros.py
+   ```
+
+   Il retire le titre de chaque carte (qui donnerait la réponse), enregistre l'image sous un nom neutre dans
+   `media/chiropteres/repartition/` et met à jour `data/chiropteres-repartition.js`.
+3. Publier comme pour les chants.
+
 ## Ajouter un quiz
 
 - Décrire le quiz dans `js/catalogue.js` (taxon, nom, type, fichier de données).
@@ -75,4 +89,5 @@ puis ouvrir http://localhost:8000.
 | `js/combobox.js` | Liste déroulante avec recherche (style shadcn/ui) |
 | `js/outils.js` | Fonctions partagées (icônes, recherche sans accents…) |
 | `tools/generer-chants.py` | Préparation des sons et des données |
+| `tools/generer-cartes-chiros.py` | Recadrage des cartes de répartition des chiroptères |
 | `tools/generer-vocabulaire.py` | Préparation du vocabulaire (`data/vocabulaire.tsv` → `data/vocabulaire.js`) |
