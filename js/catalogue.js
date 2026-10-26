@@ -1,6 +1,9 @@
 // Catalogue des taxons et de leurs quiz.
+// Un taxon contient des « quiz » et/ou des sous-groupes (« groupes », ex. Mammifères >
+// Chiroptères), qui contiennent à leur tour des quiz.
 // Pour ajouter un quiz : ajouter une entrée dans « quiz » et charger son fichier
-// de données dans index.html (window.QUIZ_DONNEES[<donnees>]).
+// de données dans index.html (window.QUIZ_DONNEES[<donnees>]). L'id d'un quiz doit
+// être unique dans tout le catalogue (il sert à mémoriser la sélection).
 //
 // Types de quiz :
 //   "audio-saisie" : on écoute un son et on choisit le nom dans une combobox.
@@ -66,22 +69,30 @@ window.CATALOGUE = [
     nom: "Mammifères",
     description: "Chauves-souris et autres mammifères de France.",
     icone: "patte",
-    quiz: [
+    groupes: [
       {
-        id: "chiropteres-repartition",
-        nom: "Répartition des chiroptères",
-        description: "Observe la carte de répartition en France et retrouve la chauve-souris.",
-        type: "image-qcm",
-        mode: "qcm",
-        donnees: "chiropteres-repartition",
-        icone: "carte",
-        libelles: {
-          singulier: "chauve-souris",
-          pluriel: "chauves-souris",
-          feminin: true,
-          question: "Quelle chauve-souris a cette répartition ?",
-          image: "Carte de répartition en France de l’espèce à trouver",
-        },
+        id: "chiropteres",
+        nom: "Chiroptères",
+        description: "Les chauves-souris.",
+        icone: "chauveSouris",
+        quiz: [
+          {
+            id: "chiropteres-repartition",
+            nom: "Répartition France métropolitaine",
+            description: "Observe la carte de répartition et retrouve la chauve-souris.",
+            type: "image-qcm",
+            mode: "qcm",
+            donnees: "chiropteres-repartition",
+            icone: "carte",
+            libelles: {
+              singulier: "chauve-souris",
+              pluriel: "chauves-souris",
+              feminin: true,
+              question: "Quelle chauve-souris a cette répartition ?",
+              image: "Carte de répartition en France de l’espèce à trouver",
+            },
+          },
+        ],
       },
     ],
   },

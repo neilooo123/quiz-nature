@@ -1,10 +1,10 @@
 // Navigation entre les écrans (via l'adresse #/…) et affichage.
 //
-//   #/                              choix du taxon
-//   #/<taxon>                       choix du quiz
-//   #/<taxon>/<quiz>                sélection des espèces
-//   #/<taxon>/<quiz>/jeu            questions
-//   #/<taxon>/<quiz>/resume         résumé
+//   #/                                       accueil : choix du taxon
+//   #/<taxon>[/<groupe>…]                    sous-groupes et quiz (ex. Mammifères > Chiroptères)
+//   #/<taxon>[/<groupe>…]/<quiz>             sélection des espèces
+//   #/<taxon>[/<groupe>…]/<quiz>/jeu         questions
+//   #/<taxon>[/<groupe>…]/<quiz>/resume      résumé
 
 (function () {
   const { icone, normaliser, echapper, formaterDuree, stockage } = window.Outils;
@@ -23,13 +23,27 @@
     return "#/" + parties.map(encodeURIComponent).join("/");
   }
 
+  // Descend dans le catalogue : taxon, sous-groupes éventuels, puis quiz et étape.
   function lireRoute() {
-    const [taxonId, quizId, etape] = location.hash
-      .replace(/^#\/?/, "")
-      .split("/")
-      .filter(Boolean)
-      .map(decodeURIComponent);
-    return { taxonId, quizId, etape };
+    const parties = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(decodeURIComponent);
+    const noeuds = [];
+    let enfants = window.CATALOGUE;
+    let i = 0;
+    for (; i < parties.length; i++) {
+      const noeud = enfants.find((n) => n.id === parties[i]);
+      if (!noeud) break;
+      noeuds.push(noeud);
+      enfants = noeud.groupes || [];
+    }
+    const dernier = noeuds[noeuds.length - 1];
+    const quiz = dernier && (dernier.quiz || []).find((q) => q.id === parties[i]);
+    if (quiz) i++;
+    const etape = quiz && ["jeu", "resume"].includes(parties[i]) ? parties[i++] : undefined;
+    return { noeuds, quiz, etape, reconnue: i === parties.length };
+  }
+
+  function nbQuiz(noeud) {
+    return (noeud.quiz || []).length + (noeud.groupes || []).reduce((total, g) => total + nbQuiz(g), 0);
   }
 
   function especesDu(quiz) {
@@ -40,27 +54,24 @@
     nettoyages.forEach((f) => f());
     nettoyages = [];
 
-    const route = lireRoute();
-    const taxon = window.CATALOGUE.find((t) => t.id === route.taxonId);
-    const quiz = taxon && taxon.quiz.find((q) => q.id === route.quizId);
+    const { noeuds, quiz, etape, reconnue } = lireRoute();
+    // Ids de l'adresse jusqu'au quiz (ou jusqu'au dernier groupe) : base des liens.
+    const base = noeuds.map((n) => n.id).concat(quiz ? [quiz.id] : []);
 
-    if (route.taxonId && !taxon) return location.replace("#/");
-    if (route.quizId && !quiz) return location.replace(chemin(taxon.id));
-
-    if (quiz && route.etape === "jeu" && (!session || session.quiz !== quiz || session.terminee)) {
-      return location.replace(chemin(taxon.id, quiz.id));
+    // Adresse inconnue, ou partie terminée / jamais commencée : on remonte au dernier niveau valide.
+    if (!reconnue) return location.replace(chemin(...base));
+    if (etape === "jeu" && (!session || session.quiz !== quiz || session.terminee)) {
+      return location.replace(chemin(...base));
     }
-    if (quiz && route.etape === "resume" && (!session || session.quiz !== quiz)) {
-      return location.replace(chemin(taxon.id, quiz.id));
-    }
+    if (etape === "resume" && (!session || session.quiz !== quiz)) return location.replace(chemin(...base));
 
-    if (!taxon) ecranTaxons();
-    else if (!quiz) ecranQuiz(taxon);
-    else if (route.etape === "jeu") ecranJeu(taxon, quiz);
-    else if (route.etape === "resume") ecranResume(taxon, quiz);
-    else ecranSelection(taxon, quiz);
+    if (!noeuds.length) ecranAccueil();
+    else if (!quiz) ecranNoeud(noeuds[noeuds.length - 1], base);
+    else if (etape === "jeu") ecranJeu(base, quiz);
+    else if (etape === "resume") ecranResume(base, quiz);
+    else ecranSelection(base, quiz);
 
-    afficherFil(taxon, quiz, route.etape);
+    afficherFil(noeuds, quiz, etape);
   }
 
   // Remplace le contenu de la page ; renvoie l'élément de l'écran (pour y brancher les événements).
@@ -81,13 +92,16 @@
     return `<div class="titre-page"><h1 tabindex="-1">${echapper(titre)}</h1><p>${echapper(sousTitre)}</p></div>`;
   }
 
-  function afficherFil(taxon, quiz, etape) {
-    const elements = [];
-    if (taxon) {
-      elements.push(quiz ? lienFil(chemin(taxon.id), taxon.nom, true) : courantFil(taxon.nom));
-    }
+  function afficherFil(noeuds, quiz, etape) {
+    const ids = noeuds.map((n) => n.id);
+    // Sur téléphone, faute de place, seul le dernier niveau reste affiché.
+    const elements = noeuds.map((n, i) =>
+      i === noeuds.length - 1 && !quiz
+        ? courantFil(n.nom)
+        : lienFil(chemin(...ids.slice(0, i + 1)), n.nom, true)
+    );
     if (quiz) {
-      elements.push(etape ? lienFil(chemin(taxon.id, quiz.id), quiz.nom) : courantFil(quiz.nom));
+      elements.push(etape ? lienFil(chemin(...ids, quiz.id), quiz.nom) : courantFil(quiz.nom));
     }
     if (etape) elements.push(courantFil(etape === "jeu" ? "Quiz" : "Résumé"));
     fil.innerHTML = elements.join("");
@@ -126,38 +140,46 @@
     });
   }
 
-  // ---------- Écran 1 : taxons ----------
+  // ---------- Écran 1 : accueil ----------
 
-  function ecranTaxons() {
-    const cartes = window.CATALOGUE.map((taxon) => {
-      const nb = taxon.quiz.length;
-      const contenu = `
-        <span class="carte-icone">${icone(taxon.icone)}</span>
-        <div><h2>${echapper(taxon.nom)}</h2><p>${echapper(taxon.description)}</p></div>
-        ${nb ? `<span class="badge badge--accent">${nb} quiz</span>` : `<span class="badge">Bientôt disponible</span>`}`;
-      return nb
-        ? `<a class="carte" href="${chemin(taxon.id)}">${contenu}</a>`
-        : `<div class="carte carte--inactive" aria-disabled="true">${contenu}</div>`;
-    });
-    afficher(`
-      ${enteteDePage("Que veux-tu réviser ?", "Choisis un taxon ou le vocabulaire.")}
-      <div class="grille-cartes">${cartes.join("")}</div>`);
+  // Carte d'un taxon ou d'un sous-groupe ; grisée tant qu'il n'a aucun quiz.
+  function carteNoeud(noeud, href) {
+    const nb = nbQuiz(noeud);
+    const contenu = `
+      <span class="carte-icone">${icone(noeud.icone)}</span>
+      <div><h2>${echapper(noeud.nom)}</h2><p>${echapper(noeud.description)}</p></div>
+      ${nb ? `<span class="badge badge--accent">${nb} quiz</span>` : `<span class="badge">Bientôt disponible</span>`}`;
+    return nb
+      ? `<a class="carte" href="${href}">${contenu}</a>`
+      : `<div class="carte carte--inactive" aria-disabled="true">${contenu}</div>`;
   }
 
-  // ---------- Écran 2 : quiz d'un taxon ----------
-
-  function ecranQuiz(taxon) {
-    const cartes = taxon.quiz.map((quiz) => {
-      const nb = especesDu(quiz).length;
-      return `
-        <a class="carte" href="${chemin(taxon.id, quiz.id)}">
-          <span class="carte-icone">${icone(quiz.icone)}</span>
-          <div><h2>${echapper(quiz.nom)}</h2><p>${echapper(quiz.description)}</p></div>
-          <span class="badge badge--accent">${nb} ${echapper(nb > 1 ? quiz.libelles.pluriel : quiz.libelles.singulier)}</span>
-        </a>`;
-    });
+  function ecranAccueil() {
     afficher(`
-      ${enteteDePage(taxon.nom, "Choisis le quiz que tu veux faire.")}
+      ${enteteDePage("Que veux-tu réviser ?", "Choisis un taxon ou le vocabulaire.")}
+      <div class="grille-cartes">${window.CATALOGUE.map((t) => carteNoeud(t, chemin(t.id))).join("")}</div>`);
+  }
+
+  // ---------- Écran 2 : sous-groupes et quiz d'un taxon ----------
+
+  function ecranNoeud(noeud, base) {
+    const groupes = noeud.groupes || [];
+    const cartes = groupes
+      .map((g) => carteNoeud(g, chemin(...base, g.id)))
+      .concat(
+        (noeud.quiz || []).map((quiz) => {
+          const nb = especesDu(quiz).length;
+          return `
+            <a class="carte" href="${chemin(...base, quiz.id)}">
+              <span class="carte-icone">${icone(quiz.icone)}</span>
+              <div><h2>${echapper(quiz.nom)}</h2><p>${echapper(quiz.description)}</p></div>
+              <span class="badge badge--accent">${nb} ${echapper(nb > 1 ? quiz.libelles.pluriel : quiz.libelles.singulier)}</span>
+            </a>`;
+        })
+      );
+    const consigne = groupes.length ? "Choisis un groupe." : "Choisis le quiz que tu veux faire.";
+    afficher(`
+      ${enteteDePage(noeud.nom, consigne)}
       ${cartes.length ? `<div class="grille-cartes">${cartes.join("")}</div>` : `<p class="vide">Aucun quiz pour l’instant : bientôt disponible.</p>`}`);
   }
 
@@ -198,7 +220,7 @@
     return [...parCategorie.entries()].map(([nom, liste]) => ({ nom, groupes: grouperEspeces(liste, fusionnerSeules) }));
   }
 
-  function ecranSelection(taxon, quiz) {
+  function ecranSelection(base, quiz) {
     const L = quiz.libelles;
     const especes = especesDu(quiz);
     const cleStockage = "quiz-nature:selection:" + quiz.id;
@@ -417,7 +439,7 @@
           mode: ecran.querySelector('input[name="mode"]:checked')?.value || quiz.mode,
           toutes: especes,
         });
-        location.hash = chemin(taxon.id, quiz.id, "jeu");
+        location.hash = chemin(...base, "jeu");
       }
     });
 
@@ -480,7 +502,7 @@
     };
   }
 
-  function ecranJeu(taxon, quiz) {
+  function ecranJeu(base, quiz) {
     const L = quiz.libelles;
     const ecran = afficher(
       `
@@ -675,7 +697,7 @@
       if (action === "suivant") afficherQuestion();
       if (action === "fin") {
         session.terminer();
-        location.hash = chemin(taxon.id, quiz.id, "resume");
+        location.hash = chemin(...base, "resume");
       }
     });
 
@@ -691,7 +713,7 @@
     return "Continue à t’entraîner, ça va venir !";
   }
 
-  function ecranResume(taxon, quiz) {
+  function ecranResume(base, quiz) {
     const { score, total } = session;
     const pourcentage = total ? Math.round((score / total) * 100) : 0;
     const nbEspeces = session.especes.length;
@@ -742,9 +764,9 @@
       const action = e.target.closest("[data-action]")?.dataset.action;
       if (action === "rejouer") {
         session = new window.SessionQuiz(quiz, session.especes, session.options);
-        location.hash = chemin(taxon.id, quiz.id, "jeu");
+        location.hash = chemin(...base, "jeu");
       }
-      if (action === "modifier") location.hash = chemin(taxon.id, quiz.id);
+      if (action === "modifier") location.hash = chemin(...base);
     });
   }
 
