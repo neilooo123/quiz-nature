@@ -31,6 +31,7 @@ EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 # Nom de fichier -> nom affiché, quand le fichier est mal orthographié.
 CORRECTIONS = {
     "GrandMurin": "Grand murin",
+    "Murin d'escalera": "Murin d'Escalera",
 }
 
 FOND = (254, 242, 232)  # beige du cadre des cartes
