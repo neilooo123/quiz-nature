@@ -4,6 +4,8 @@
 // Pour ajouter un quiz : ajouter une entrée dans « quiz » et charger son fichier
 // de données dans index.html (window.QUIZ_DONNEES[<donnees>]). L'id d'un quiz doit
 // être unique dans tout le catalogue (il sert à mémoriser la sélection).
+// « source » est affichée en bas de page sur les écrans du quiz ; « {sources} » y est
+// remplacé par la liste des sources trouvées dans les données (champ « source »).
 //
 // Types de quiz :
 //   "audio-saisie" : on écoute un son et on choisit le nom dans une combobox.
@@ -26,6 +28,7 @@ window.CATALOGUE = [
         type: "audio-saisie",
         donnees: "oiseaux-chants",
         icone: "casque",
+        source: "Données récupérées par des élèves de la licence EDEN",
         libelles: {
           singulier: "oiseau",
           pluriel: "oiseaux",
@@ -50,6 +53,7 @@ window.CATALOGUE = [
         type: "vocabulaire",
         donnees: "vocabulaire",
         icone: "livre",
+        source: "Les sources des définitions viennent de divers endroits : {sources}.",
         modes: [
           { id: "qcm", nom: "4 propositions" },
           { id: "saisie", nom: "Écrire le mot" },
@@ -84,6 +88,8 @@ window.CATALOGUE = [
             mode: "qcm",
             donnees: "chiropteres-repartition",
             icone: "carte",
+            source:
+              "Source des cartes : site web des CEN (Conservatoires d’espaces naturels), PNAC (Plan national d’actions Chiroptères).",
             libelles: {
               singulier: "chauve-souris",
               pluriel: "chauves-souris",

@@ -10,6 +10,7 @@
   const { icone, normaliser, echapper, formaterDuree, stockage } = window.Outils;
   const app = document.getElementById("app");
   const fil = document.getElementById("fil-ariane");
+  const sourceQuiz = document.getElementById("source-quiz");
   const MINIMUM_ESPECES = 2;
 
   let session = null; // SessionQuiz en cours, ou terminée pour le résumé
@@ -72,6 +73,18 @@
     else ecranSelection(base, quiz);
 
     afficherFil(noeuds, quiz, etape);
+    afficherSource(quiz);
+  }
+
+  // Bas de page : source des données du quiz affiché (rien en dehors des quiz).
+  function afficherSource(quiz) {
+    let texte = (quiz && quiz.source) || "";
+    if (texte.includes("{sources}")) {
+      const sources = [...new Set(especesDu(quiz).map((e) => e.source).filter(Boolean))];
+      texte = texte.replace("{sources}", sources.sort((a, b) => a.localeCompare(b, "fr")).join(", "));
+    }
+    sourceQuiz.textContent = texte;
+    sourceQuiz.hidden = !texte;
   }
 
   // Remplace le contenu de la page ; renvoie l'élément de l'écran (pour y brancher les événements).
